@@ -83,10 +83,12 @@ def run_post(argv):
             print '[warn]: look for your output in a current dir='+args.tmpDir
 
     #Locate available estofs paths
-    ofsPattern = args.ofsDir +'estofs_'+ args.domain + '.*'
-    ofsPaths   = sorted( glob.glob(ofsPattern), \
-                        key=os.path.getmtime )
-    
+    #ofsPattern = args.ofsDir +'estofs_'+ args.domain + '.*'
+    ofsPattern = args.ofsDir +'*'  
+    ofsPaths   = sorted( glob.glob(ofsPattern) )#, \
+                        #key=os.path.getmtime )
+    print '[info]: looking for pattern ', ofsPattern
+
     if len(ofsPaths) == 0:
         print '[error]: ofs path ' + ofsPaths+ ' does not exist. Exiting'
         return
@@ -135,12 +137,12 @@ def run_post(argv):
 
     # Define skill assessment period ( a full UTC day prior to now)
     now = datetime.datetime.utcnow()
-    now = datetime.datetime.strptime('2018041703','%Y%m%d%H')
+    now = datetime.datetime.strptime('2018111623','%Y%m%d%H')
 
     print '[info]: Date now: ', now
-    skillStartDate = now-datetime.timedelta(days=2)
+    skillStartDate = now-datetime.timedelta(days=1)
     skillStartDate = skillStartDate.replace(hour=0, minute=0)
-    skillEndDate   = skillStartDate+datetime.timedelta(hours=2*24)
+    skillEndDate   = skillStartDate+datetime.timedelta(hours=1*24)
     print '[info]: Skill Assessment Period: ', skillStartDate, skillEndDate
     
     nosid = '8449130' # Nantucket
@@ -170,7 +172,11 @@ def run_post(argv):
     nosid = '8652587' # Oregon Inlet MC
     nosid = '8447386' # Fall river MA
     nosid = '8534720' # Atlantic City NJ 
-
+    nosid = '8518750' # The Battery
+    nosid = '8531680' # Sandy Hook NJ
+    nosid = '8461490' # New London CT
+    nosid = '8534720' # Atlantic City NJ 
+    
     observed  = csdlpy.obs.coops.getData(nosid, [skillStartDate, skillEndDate], \
                                                 product='waterlevelrawsixmin')
     predicted = csdlpy.obs.coops.getData(nosid, [skillStartDate, skillEndDate], \
@@ -201,11 +207,14 @@ def run_post(argv):
     for n in range(len(cwls)):
         c = cwls[n]
         ctime = c['time']
-        if ctime[0] <= skillStartDate + datetime.timedelta(minutes=10) :
+        if ctime[0] <= skillStartDate + datetime.timedelta(hours=1) and ctime[-1] >= skillEndDate - datetime.timedelta(hours=1):
             idx1 = np.where( np.datetime64(skillStartDate) <= ctime)[0]
             idx2 = np.where( np.datetime64(skillEndDate)   >= ctime)[0]
             idx  = list(set(idx1).intersection(idx2))
-        
+
+            print 'ctime=', ctime[0], ' to ', ctime[-1] 
+            print 'len idx=', len(idx)
+                    
             refDates, obsValsProjCWL, modValsProjCWL = \
                 csdlpy.interp.projectTimeSeries (observed['dates'], observed['values'], \
                                              c['time'][idx], \
@@ -215,7 +224,8 @@ def run_post(argv):
             M = csdlpy.valstat.metrics (obsValsProjCWL, modValsProjCWL, refDates)
             m_metrics_CWL.append(M)
 
-            leadHours = round(1/3600.*(ctime[0] - skillStartDate).total_seconds())
+            leadHours = -1.*round(1/3600.*(ctime[0] - skillStartDate).total_seconds())
+            print 'leadHours=',  leadHours
             m_leadtime.append(leadHours)              
             ax.plot(refDates, modValsProjCWL, '.', linewidth=1)
             
@@ -223,9 +233,9 @@ def run_post(argv):
             peak_mod_dat = refDates[np.nanargmax(modValsProjCWL)]
             ax.plot(peak_mod_dat,peak_mod_val,'ok')
         else:
-            print '[warn]: skipping nowcasts, ctime[0]=', ctime[0].strftime('%Y/%m/%d %H:%M')
+            print '[warn]: skipping nowcasts, ctime=', ctime[0], ' to ', ctime[-1]
     
-    ax.plot(refDates, obsValsProjCWL,'.', color='lime',linewidth=3.0)
+    ax.plot(refDates, obsValsProjCWL,'.', color='lime',linewidth=5.0)
     peak_obs_val = np.nanmax(obsValsProjCWL)
     peak_obs_dat = refDates[np.nanargmax(obsValsProjCWL)]
     ax.plot(peak_obs_dat, peak_obs_val,'o',markerfacecolor='limegreen',markeredgecolor='k')
@@ -239,6 +249,7 @@ def run_post(argv):
     ax.xaxis.set_major_formatter(mdates.DateFormatter('%a %m/%d\n%H:00'))
     ax.xaxis.set_minor_locator(MultipleLocator(0.5))
 
+    ax.set_xlim (        xlim)
     ax.set_ylim (        ylim)
     ax2.set_ylim(3.28084*ylim[0], 3.28084*ylim[1])
     ax2.plot([],[])
@@ -260,7 +271,7 @@ def run_post(argv):
         c = cwls[n]
         h = htps[n]
         ctime = c['time']
-        if ctime[0] <= skillStartDate + datetime.timedelta(minutes=10) :
+        if ctime[0] <= skillStartDate + datetime.timedelta(hours=1) and ctime[-1] >= skillEndDate - datetime.timedelta(hours=1):
             idx1 = np.where( np.datetime64(skillStartDate) <= ctime)[0]
             idx2 = np.where( np.datetime64(skillEndDate)   >= ctime)[0]
             idx  = list(set(idx1).intersection(idx2))
@@ -274,16 +285,16 @@ def run_post(argv):
             M = csdlpy.valstat.metrics (obsValsProjSWL, modValsProjSWL, refDates)
             m_metrics_SWL.append(M)
 
-            leadHours = round(1/3600.*(ctime[0] - skillStartDate).total_seconds())
+            leadHours = -1.*round(1/3600.*(ctime[0] - skillStartDate).total_seconds())
             ax.plot(refDates, modValsProjSWL, '.', linewidth=1)
 
             peak_mod_val = np.nanmax(modValsProjSWL)
             peak_mod_dat = refDates[np.nanargmax(modValsProjSWL)]
             ax.plot(peak_mod_dat,peak_mod_val,'ok')
         else:
-            print '[warn]: skipping nowcasts, ctime[0]=', ctime[0].strftime('%Y/%m/%d %H:%M')
+            print '[warn]: skipping nowcasts, ctime=', ctime[0], ' to ', ctime[-1]
 
-    ax.plot(refDates, obsValsProjSWL,'.', color='lime',linewidth=3.0)
+    ax.plot(refDates, obsValsProjSWL,'.', color='lime',linewidth=5.0)
     peak_obs_val = np.nanmax(obsValsProjSWL)
     peak_obs_dat = refDates[np.nanargmax(obsValsProjSWL)]
 
@@ -298,7 +309,7 @@ def run_post(argv):
     ax.xaxis.set_major_formatter(mdates.DateFormatter('%a %m/%d\n%H:00'))
     ax.xaxis.set_minor_locator(MultipleLocator(0.5))
 
-    #ax.set_xlim (        xlim)
+    ax.set_xlim (        xlim)
     ax.set_ylim (        ylim)
     ax2.set_ylim(3.28084*ylim[0], 3.28084*ylim[1])
     ax2.plot([],[])
@@ -326,8 +337,9 @@ def run_post(argv):
         yy_skil.append( m_metrics_CWL[n]['skil'] )
         yy_plag.append( m_metrics_CWL[n]['plag']/60. )
         
-    hticks = np.arange(-102,6,6)   
-     
+    #hticks = np.arange(-168,6,6)   
+    hticks = np.arange(0,168,6)
+ 
     f = plt.figure(figsize=(10,4))
     plt.plot(xx, yy_rmsd,'ko-')
     plt.plot([xx[0], xx[-1]],[0,0],'g')
@@ -335,7 +347,7 @@ def run_post(argv):
     plt.xlabel('LEAD TIME, HRS')
     plt.ylabel('RMSD, METERS')
     plt.title('NOSID: ' + str(nosid) + ' SPAN: ' + skillStartDate.strftime('%Y/%m/%d %H:%M') + '-'+skillEndDate.strftime('%Y/%m/%d %H:%M'))
-    plt.ylim(-0.01,0.5)
+    plt.ylim(-0.01,0.7)
     ax = f.gca()
     ax.set_xticks( hticks )
     plt.grid()
@@ -411,10 +423,10 @@ def run_post(argv):
     plt.xlabel('LEAD_TIME, HRS')
     plt.ylabel('PLAG, HOURS')
     plt.title('NOSID: ' + str(nosid) + ' SPAN: ' + skillStartDate.strftime('%Y/%m/%d %H:%M') + '-'+skillEndDate.strftime('%Y/%m/%d %H:%M'))
-    plt.ylim(-25., 25.)
+    plt.ylim(-6., 6.)
     ax = f.gca()
     ax.set_xticks( hticks )
-    ax.set_yticks (np.arange(-24,30,6))
+    ax.set_yticks (np.arange(-6,12,2))
     plt.grid()
     plt.savefig('metrics-CWL-plag.png')
 
@@ -439,7 +451,8 @@ def run_post(argv):
         yy_skil.append( m_metrics_SWL[n]['skil'] )
         yy_plag.append( m_metrics_SWL[n]['plag']/60. )
 
-    hticks = np.arange(-102,6,6)
+    #hticks = np.arange(-168,6,6)
+    hticks = np.arange(0,168,6)
 
     f = plt.figure(figsize=(10,4))
     plt.plot(xx, yy_rmsd,'ko-')
@@ -448,7 +461,7 @@ def run_post(argv):
     plt.xlabel('LEAD TIME, HRS')
     plt.ylabel('SWL RMSD, METERS')
     plt.title('NOSID: ' + str(nosid) + ' SPAN: ' + skillStartDate.strftime('%Y/%m/%d %H:%M') + '-'+skillEndDate.strftime('%Y/%m/%d %H:%M'))
-    plt.ylim(-0.01,0.5)
+    plt.ylim(-0.01,0.7)
     ax = f.gca()
     ax.set_xticks( hticks )
     plt.grid()
@@ -524,10 +537,10 @@ def run_post(argv):
     plt.xlabel('LEAD_TIME, HRS')
     plt.ylabel('SWL PLAG, HOURS')
     plt.title('NOSID: ' + str(nosid) + ' SPAN: ' + skillStartDate.strftime('%Y/%m/%d %H:%M') + '-'+skillEndDate.strftime('%Y/%m/%d %H:%M'))
-    plt.ylim(-25., 25.)
+    plt.ylim(-6., 6.)
     ax = f.gca()
     ax.set_xticks( hticks )
-    ax.set_yticks (np.arange(-24,30,6))
+    ax.set_yticks (np.arange(-6,12,2))
     plt.grid()
     plt.savefig('metrics-SWL-plag.png')
 
