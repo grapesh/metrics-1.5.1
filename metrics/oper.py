@@ -7,6 +7,7 @@ import os,sys
 import argparse
 import csdlpy
 import datetime
+from datetime import timedelta as dt
 import glob
 import numpy as np
 # Move to plot.py
@@ -44,7 +45,9 @@ def read_cmd_argv (argv):
     parser.add_argument('-d','--dbDir',          required=True)
     parser.add_argument('-n','--modelName',      required=True)
     
-    args = parser.parse_args()    
+    args = parser.parse_args() 
+    if 'latest' in args.PDY:
+        args.PDY = Date2PDY(datetime.datetime.utcnow()-dt(days=1))
     print '[info]: retrospect.py is configured with :', args
     return args
     
