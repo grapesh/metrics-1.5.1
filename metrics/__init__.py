@@ -1,3 +1,3 @@
 import metrics
 from .version import __version__
-__all__ = ['post','retrospect','plot']
+__all__ = ['post','retrospect','oper','plot']

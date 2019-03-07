@@ -61,7 +61,8 @@ def run_post(argv):
     datelist = [ date - datetime.timedelta(days=x) for x in range(0, numdays)]
     pdys = []
     for d in sorted(datelist):
-        pdy = os.path.join(args.ofsDir, Date2PDY (d))
+        #pdy = os.path.join(args.ofsDir, Date2PDY (d))
+        pdy = args.ofsDir + '.' + Date2PDY (d) + '/'
         if os.path.exists (pdy):
             pdys.append(pdy)
         else:
@@ -181,6 +182,7 @@ def run_post(argv):
                 idx = np.argsort(leadtime)
                 #for lt in leadtime:
                 for count in idx:
+#                    line = str(lt) + ',' + str(np.nanmax(obsValsProjCWL)) + ',' \
                     line = str(leadtime[count]) + ',' + str(np.nanmax(obsValsProjCWL)) + ',' \
                           + str(metrics[count]['peak']) + ',' \
                           + str(metrics[count]['plag']) + ',' \
