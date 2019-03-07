@@ -14,7 +14,7 @@ export pythonCode=${platform}"/gpfs/hps3/nos/noscrub/nwprod/metrics-1.5.1/metric
 export logFile=${platform}"/gpfs/hps3/nos/noscrub/polar/metrics/oper.log"
 
 export modelName="estofs_atl"
-export PDY=$1   #"20180110"
+export PDY="latest" # $1   #"20180110"
 
 export ofsDir=${platform}"/gpfs/hps/nco/ops/com/estofs/prod/"${modelName}
 #export ofsDir=${platform}"/gpfs/hps3/nos/noscrub/hpss/"
